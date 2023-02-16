@@ -1,0 +1,88 @@
+name: us-counties
+
+resources:
+  - name: us-fips
+    url: https://example.com/us-fips.txt
+    format: txt
+    options:
+      skip_lines: 0
+      delimiter: ","
+      quote_character: "\""
+      encoding: utf-8
+
+  - name: state_codes
+    url: https://example.com/state_codes.csv
+    format: csv
+    options:
+      header_lines: 1
+      delimiter: ","
+      quote_character: "\""
+      encoding: utf-8
+
+transform:
+  - python: |
+      
+      import csv
+      from rdflib import Namespace, Graph, Literal, RDF, URIRef
+
+      # Define the namespaces
+      kastle = Namespace("http://kastle.com/")
+      schema = Namespace("http://schema.org/")
+
+      # Open the text file
+      with open(resources['us-fips']['path'], 'r') as file:
+          county_list = []
+          for line in file:
+              values = line.strip().split(",")
+              state_code = values[0]
+              state_fips = values[1]
+              county_fips = values[2]
+              county_name = values[3]
+              county_id = values[4]
+              county_dict = {
+                  "state_code": state_code,
+                  "state_fips": state_fips,
+                  "county_fips": county_fips,
+                  "county_name": county_name,
+                  "county_id": county_id
+              }
+              county_list.append(county_dict)
+
+      # Create a dictionary of state codes
+      state_codes = {}
+      with open(resources['state_codes']['path'], 'r') as csvfile:
+          reader = csv.reader(csvfile)
+          for row in reader:
+              state_codes[row[1]] = row[0]
+
+      # Loop through the list of dictionaries and add the data to the graph
+      g = Graph()
+      for item in county_list:
+          county_name = item.get('county_name')
+          state_name = state_codes.get(item['state_code'])
+
+          if county_name is not None:
+              county_name = county_name.replace(' ', '_')
+
+          subject = kastle[county_name + '_' + state_name]
+          state_code = item['state_code']
+          state_fips = item['state_fips']
+          county_fips = item['county_fips']
+          county_id = item['county_id']
+          state = kastle[state_code]
+
+          g.add((subject, RDF.type, schema.Place))
+          g.add((subject, kastle.hasCountyName, Literal(item['county_name'])))
+          g.add((subject, kastle.hasCountyCode, Literal(county_fips)))
+          g.add((subject, kastle.hasCountyFIPS, Literal(item['county_fips'])))
+          g.add((subject, kastle.hasCountyID, Literal(item['county_id'])))
+          g.add((subject, kastle.hasStateCode, state))
+          g.add((subject, kastle.hasStateName, Literal(state_name)))
+          g.add((state, RDF.type, schema.Place))
+          g.add((state, kastle.hasStateCode, Literal(state_code)))
+          g.add((state, kastle.hasStateFIPS, Literal(state_fips)))
+
+      # Write the graph to file
+      with open('my_graph.ttl', 'w') as f:
+          f.write(g.serialize(format='turtle').decode('utf-8'))
+
