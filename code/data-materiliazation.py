@@ -1,5 +1,9 @@
 import csv
 
+
+# First , data is being taken from a text file and a csv file and then those two datasets are being 
+# connected and made into a single dictionary. 
+
 # open the text file
 with open("us-fips.txt", "r") as file:
 
