@@ -2,7 +2,7 @@ name: us-counties
 
 resources:
   - name: us-fips
-    url: https://example.com/us-fips.txt
+    url: /Users/andreachristou/Documents/git/Example-KG-Ecosystem/data/us-fips.txt
     format: txt
     options:
       skip_lines: 0
@@ -11,7 +11,7 @@ resources:
       encoding: utf-8
 
   - name: state_codes
-    url: https://example.com/state_codes.csv
+    url:/Users/andreachristou/Documents/git/Example-KG-Ecosystem/data/state_codes.csv
     format: csv
     options:
       header_lines: 1
